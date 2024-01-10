@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Replicache,
-  TEST_LICENSE_KEY,
-  dropAllDatabases,
-  type WriteTransaction,
-} from "replicache";
+import { Replicache, type WriteTransaction } from "replicache";
 import Pusher from "pusher-js";
 import { useSubscribe } from "replicache-react";
 
@@ -12,7 +7,7 @@ const spaceID = "default";
 
 const replicache = new Replicache({
   name: "repliplace",
-  licenseKey: TEST_LICENSE_KEY,
+  licenseKey: import.meta.env.VITE_REPLICACHE_KEY,
   pushURL: `/api/replicache-push`,
   pullURL: `/api/replicache-pull`,
   mutators: {
