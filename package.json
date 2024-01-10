@@ -5,17 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && prisma generate",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@prisma/client": "5.8.0",
     "@vercel/node": "^3.0.15",
     "daisyui": "^4.5.0",
+    "hono": "^3.12.1",
+    "nanoid": "^5.0.4",
+    "pusher": "^5.2.0",
+    "pusher-js": "8.4.0-rc2",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "replicache": "^14.0.3",
+    "replicache-react": "^5.0.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/node": "^20.10.8",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
@@ -28,6 +37,7 @@
     "postcss": "^8.4.33",
     "prettier": "^3.1.1",
     "prettier-plugin-tailwindcss": "^0.5.11",
+    "prisma": "^5.8.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"

@@ -1,62 +1,88 @@
 import { useState } from "react";
-const SIZE = 20;
+import {
+  Replicache,
+  TEST_LICENSE_KEY,
+  dropAllDatabases,
+  type WriteTransaction,
+} from "replicache";
+import Pusher from "pusher-js";
+import { useSubscribe } from "replicache-react";
+
+const spaceID = "default";
+
+const replicache = new Replicache({
+  name: "repliplace",
+  licenseKey: TEST_LICENSE_KEY,
+  pushURL: `/api/replicache-push`,
+  pullURL: `/api/replicache-pull`,
+  mutators: {
+    async setCell(
+      tx: WriteTransaction,
+      { i, color }: { i: number; color: ColorName },
+    ) {
+      await tx.set(`cell/${spaceID}/${i}`, { i, color });
+    },
+  },
+});
+
+listen(spaceID);
+
+const SIZE = 50;
 
 const classList = {
-  White: "bg-white",
   Black: "bg-black",
-  Slate: "bg-slate-500",
   Gray: "bg-gray-500",
-  Zinc: "bg-zinc-500",
-  Neutral: "bg-neutral-500",
-  Stone: "bg-stone-500",
   Red: "bg-red-500",
   Orange: "bg-orange-500",
-  Amber: "bg-amber-500",
   Yellow: "bg-yellow-500",
-  Lime: "bg-lime-500",
   Green: "bg-green-500",
-  Emerald: "bg-emerald-500",
-  Teal: "bg-teal-500",
   Cyan: "bg-cyan-500",
-  Sky: "bg-sky-500",
   Blue: "bg-blue-500",
-  Indigo: "bg-indigo-500",
-  Violet: "bg-violet-500",
   Purple: "bg-purple-500",
-  Fuchsia: "bg-fuchsia-500",
   Pink: "bg-pink-500",
-  Rose: "bg-rose-500",
+  White: "bg-white",
 } as const;
 
 type CellState = {
+  i: number;
   color: ColorName;
-  menuOpen: boolean;
 };
 
 function App() {
-  const [grid, setGrid] = useState<CellState[]>(
+  const grid = useSubscribe(replicache, async (tx) => {
+    const cells = await tx
+      .scan<CellState>({ prefix: `cell/${spaceID}/` })
+      .entries();
+
+    let current = await cells.next();
+    let i = 0;
+
+    const m: Record<number, ColorName> = {};
+    while (current.done !== true && i++ < SIZE * SIZE) {
+      m[current.value[1].i] = current.value[1].color;
+      current = await cells.next();
+    }
+
+    return m;
+  });
+  const [menuStates, setMenuStates] = useState<boolean[]>(
     Array.from({ length: SIZE * SIZE }, () => {
-      return {
-        color: "White",
-        menuOpen: false,
-      };
+      return false;
     }),
   );
-  const updateColor = (i: number, color: ColorName) => {
-    setGrid([
-      ...grid.slice(0, i),
-      { color, menuOpen: false },
-      ...grid.slice(i + 1),
-    ]);
+  const updateColor = async (i: number, color: ColorName) => {
+    await replicache.mutate.setCell({ i, color });
+    setMenuStates((prev) => [...prev.slice(0, i), false, ...prev.slice(i + 1)]);
   };
   const toggleMenu = (i: number) => {
     return () =>
-      setGrid([
-        ...grid.slice(0, i).map((state) => ({ ...state, menuOpen: false })),
-        { color: grid[i].color, menuOpen: !grid[i].menuOpen },
-        ...grid.slice(i + 1).map((state) => ({ ...state, menuOpen: false })),
+      setMenuStates((prev) => [
+        ...prev.slice(0, i).map(() => false),
+        !prev[i],
+        ...prev.slice(i + 1).map(() => false),
       ]);
   };
+  if (!grid) return null;
   return (
     <div
       id="bg"
@@ -64,20 +90,23 @@ function App() {
       onClick={(e) => {
         // @ts-expect-error Targets have ids
         if (e.target.id === "bg") {
-          setGrid((grid) => grid.map((prev) => ({ ...prev, menuOpen: false })));
+          setMenuStates((prev) => prev.map(() => false));
         }
       }}
     >
-      <div className="grid w-fit grid-cols-20 gap-0">
-        {grid.map((cellState, i) => (
-          <Cell
-            i={i}
-            state={cellState}
-            toggleMenu={toggleMenu(i)}
-            onChange={updateColor}
-            key={i}
-          />
-        ))}
+      <div className="hero-content flex flex-col">
+        <div className="grid w-fit grid-cols-50 gap-0">
+          {menuStates.map((menuState, i) => (
+            <Cell
+              i={i}
+              color={grid[i]}
+              menuState={menuState}
+              toggleMenu={toggleMenu(i)}
+              onChange={updateColor}
+              key={i}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -87,12 +116,14 @@ type ColorName = keyof typeof classList;
 
 function Cell({
   i,
-  state,
+  color,
+  menuState,
   toggleMenu,
   onChange,
 }: {
   i: number;
-  state: CellState;
+  color: ColorName | undefined;
+  menuState: boolean;
   toggleMenu: () => void;
   onChange: (i: number, c: ColorName) => void;
 }) {
@@ -104,26 +135,20 @@ function Cell({
       <div
         id={`color-${i}`}
         role="button"
-        className={"h-5 w-5 border " + classList[state.color]}
+        className={"h-5 w-5 border " + classList[color || "White"]}
         onClick={toggleMenu}
         tabIndex={0}
       />
-      <ColorList
-        i={i}
-        isOpen={state.menuOpen}
-        onSelectColor={onSelectColor(i)}
-      />
+      {menuState && <ColorList i={i} onSelectColor={onSelectColor(i)} />}
     </div>
   );
 }
 
 function ColorList({
   i,
-  isOpen,
   onSelectColor,
 }: {
   i: number;
-  isOpen: boolean;
   onSelectColor: (c: ColorName) => void;
 }) {
   const onClick = (color: keyof typeof classList) => {
@@ -132,8 +157,7 @@ function ColorList({
   return (
     <ul
       className={
-        (isOpen ? "menu absolute block h-96 overflow-y-scroll " : "hidden ") +
-        "menu z-[99] w-52 rounded-box bg-base-100 p-2 shadow"
+        "menu absolute z-[99] block w-52 overflow-y-auto rounded-box bg-base-100 p-2 shadow"
       }
     >
       <li className="menu-title">
@@ -156,6 +180,18 @@ function ColorList({
       ))}
     </ul>
   );
+}
+
+function listen(spaceID: string) {
+  // Listen for pokes, and pull whenever we get one.
+  Pusher.logToConsole = true;
+  const pusher = new Pusher(import.meta.env.VITE_REPLICHAT_PUSHER_KEY, {
+    cluster: import.meta.env.VITE_REPLICHAT_PUSHER_CLUSTER,
+  });
+  const channel = pusher.subscribe(spaceID);
+  channel.bind("poke", () => {
+    replicache.pull();
+  });
 }
 
 export default App;

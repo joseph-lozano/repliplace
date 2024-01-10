@@ -6,9 +6,10 @@ export default {
   theme: {
     extend: {
       gridTemplateColumns: {
-        20: "repeat(20, minmax(0, 1fr))",
+        50: "repeat(50, minmax(0, 1fr))",
       },
     },
   },
   plugins: [daisyui],
+  daisyui: { logs: false },
 };

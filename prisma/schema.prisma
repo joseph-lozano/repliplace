@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+enum Color {
+  White
+  Black
+  Slate
+  Gray
+  Zinc
+  Neutral
+  Stone
+  Red
+  Orange
+  Amber
+  Yellow
+  Lime
+  Green
+  Emerald
+  Teal
+  Cyan
+  Sky
+  Blue
+  Indigo
+  Violet
+  Purple
+  Fuchsia
+  Pink
+  Rose
+}
+
+model ReplicacheSpace {
+  id      String @id
+  version Int
+}
+
+model PlaceCell {
+  spaceID             String
+  cell                Int
+  color               Color
+  lastModifiedVersion Int
+
+  @@id([spaceID, cell])
+}
+
+model ReplicacheClient {
+  id                 String @id
+  lastMutationID     Int
+  lastModifiedVerson Int
+}
