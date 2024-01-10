@@ -178,8 +178,6 @@ function ColorList({
 }
 
 function listen(spaceID: string) {
-  // Listen for pokes, and pull whenever we get one.
-  Pusher.logToConsole = true;
   const pusher = new Pusher(import.meta.env.VITE_REPLICHAT_PUSHER_KEY, {
     cluster: import.meta.env.VITE_REPLICHAT_PUSHER_CLUSTER,
   });
