@@ -130,7 +130,10 @@ function Cell({
       <div
         id={`color-${i}`}
         role="button"
-        className={"h-5 w-5 border " + classList[color || "White"]}
+        className={
+          "size-2 border md:size-3 lg:size-4 xl:size-5 " +
+          classList[color || "White"]
+        }
         onClick={toggleMenu}
         tabIndex={0}
       />
